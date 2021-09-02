@@ -1,0 +1,89 @@
+name: LLDB-MI CI
+
+on: [push, pull_request]
+    
+env:
+  # CMake build type
+  BUILD_TYPE: Release
+
+jobs:
+  checkout-on-linux:
+    name: Checkout
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{secrets.WORKFLOW_TOKEN}}
+    
+  install_dependencies:
+    name: Install dependencies
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - run: apt-get install -y clang-format clang libclang-dev liblldb-dev lldb llvm-dev llvm
+        if: matrix.os == 'ubuntu-latest'
+
+      - run: brew list --versions llvm || brew install -y llvm
+        if: matrix.os == 'macos-latest'
+        shell: bash
+
+      - run: choco list --local || choco install -y llvm
+        if: matrix.os == 'windows-latest'
+        shell: bash
+    needs: install_dependencies
+      
+  check-format:
+    runs-on: ubuntu-latest
+    steps:
+    - run: ${{github.workspace}}/ci/clang-format.sh
+    shell: bash
+    needs: checkout-on-linux
+    
+  checkout:
+    name: Checkout
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{secrets.WORKFLOW_TOKEN}}
+    needs: check-format
+
+  configure:
+    name: Configure CMake project
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - run: cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DINCLUDE_TESTS=ON
+    needs: checkout
+
+  build:
+    name: Build
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    needs: configure
+
+  test:
+    name: Run unit-tests
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - working-directory: ${{github.workspace}}/build
+        run: sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake CMakeLists.txt && sudo make && sudo cp *.a /usr/lib && sudo ln -s /usr/lib/libgtest.a /usr/local/lib/libgtest.a && sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/libgtest_main.a
+        run: ctest -V -C ${{env.BUILD_TYPE}} --test-dir ${{github.workspace}}/test/unittests
+    needs: build
+    

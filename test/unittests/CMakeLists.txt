@@ -1,6 +1,18 @@
+cmake_minimum_required(VERSION 3.11)
+
+include(FetchContent)
+FetchContent_Declare(gtest
+  QUIET
+  URL https://github.com/google/googletest/archive/refs/tags/release-1.11.0.zip
+)
+
+# Prevent overriding the parent project's compiler/linker settings, for Windows.
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(gtest)
+
 enable_testing()
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+include(GoogleTest)
 
 include_directories(../../src)
 
@@ -22,10 +34,10 @@ function(add_lldb_mi_test NAME TEST)
   endforeach(SRC)
 
   add_executable(${NAME} ${TEST} ${SOURCES_RELATIVE})
-  target_link_libraries(${NAME} GTest::GTest GTest::Main)
+  target_link_libraries(${NAME} gtest_main)
   set_target_properties(${NAME} PROPERTIES FOLDER "unittests")
 
-  add_test(unittests ${NAME})
+  gtest_discover_tests(${NAME})
 endfunction(add_lldb_mi_test)
 
 add_subdirectory(arguments)
