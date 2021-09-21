@@ -27,7 +27,7 @@ CMICmdArgContext::CMICmdArgContext() {}
 // Throws:  None.
 //--
 CMICmdArgContext::CMICmdArgContext(const CMIUtilString &vrCmdLineArgsRaw)
-    : m_strCmdArgsAndOptions(vrCmdLineArgsRaw) {}
+      : m_strCmdArgsAndOptions(vrCmdLineArgsRaw) {}
 
 //++
 // Details: CMICmdArgContext destructor.
@@ -36,7 +36,9 @@ CMICmdArgContext::CMICmdArgContext(const CMIUtilString &vrCmdLineArgsRaw)
 // Return:  None.
 // Throws:  None.
 //--
-CMICmdArgContext::~CMICmdArgContext() {}
+cmic_mdArgContext::~CMICmdArgContext()
+{
+}
 
 //++
 // Details: Retrieve the remainder of the command's argument options left to
